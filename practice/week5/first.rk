@@ -1,0 +1,53 @@
+; (pair? '(1 2)) -> #t
+(define p (cons 3 (cons 4 5)))
+(car (cdr p))
+; e като
+(cadr p)
+; car + cdr = cadr
+
+(define empty-list '())
+;list?
+;null?
+
+; списък от 6 е:
+(cons 6 '())
+
+;cdddd..r - само d-та връща списък (абе връща опашката...)
+
+(define (len lst)
+  (if (null? lst) 0
+      (+ 1 (len (cdr lst)))))
+
+(define l1 '(1 2 3 4 5))
+(define l2 '(1 3.14 "hi" #f (3 . 4)))
+
+(define (member? x lst)
+  (cond
+    ((null? lst) #f)
+    ((equal? x (car lst)) #t)
+    (else (member? x (cdr lst)))))
+
+; equal?
+; eq? === по референция!
+; eqv? Или equal?, или eq?
+
+;memq
+;memv
+;member - връща или елемента, или false
+
+(define (elem-at i lst)
+  (cond ((null? lst) "грешка")
+        ((= 0 i) (car lst))
+        (else (elem-at (- i 1) (cdr lst)))))
+
+(define (rev lst)
+  (define (helper current result)
+    (if (null? current) result
+      (helper (cdr current) (cons (car current) result))
+    ))
+  (helper lst '()))
+ 
+ (define (insert-end elem lst)
+   (rev (cons elem (rev lst))))
+
+

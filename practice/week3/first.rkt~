@@ -1,0 +1,7 @@
+(define (prod init a b)
+  (define (prod-helper result counter)
+    (if (= counter b) (* result b)
+        (prod-helper (* result counter) (+ 1 counter)))
+  )
+  (prod-helper init a)
+  )
