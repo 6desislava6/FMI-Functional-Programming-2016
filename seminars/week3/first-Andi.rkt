@@ -45,7 +45,7 @@
       ))
   (if (= 2 x) #t
       (prime-helper 2))
-        
+
   )
 
 (define (increasing? n)
@@ -53,7 +53,7 @@
     (cond
       ((= current 0) #t)
       ((<= number (remainder current 10)) #f)
-      (else (increasing-helper (quotient current 10) (remainder current 10)))       
+      (else (increasing-helper (quotient current 10) (remainder current 10)))
      )
     )
   (increasing-helper (quotient n 10) (remainder n 10))
@@ -82,8 +82,8 @@
 (to-decimal (to-binary 1234))
 
 (define (toBinary n)
-  (define (helper2 n res bit)
-    (if (= n 0) res
-        (helper2 (quotient n 2))))
-  )
-  )
+  (define (helper n res bit)
+    (if (= n 0)
+        res
+        (helper (quotient n 2) (+ res (* (remainder n 2) (expt 10 bit))) (+ bit 1))))
+  (helper n 0 0))
