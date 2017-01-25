@@ -7,25 +7,32 @@ import Database.HDBC
 -- ограничение въпросите да са уникални!
 
 getDirection answer
-  | answer == "y" || answer == "yes" = traceRight
-  | answer == "n" || answer == "no" = traceLeft
+  | answer == "y" || answer == "yes" = (traceRight, 1)
+  | answer == "n" || answer == "no" = (traceLeft, 0)
   | otherwise = error "Invalid answer"
 
-askUser EmptyTree _ = putStrLn "I give up!"
-askUser (Leaf animals) conn = guessAnimal animals conn
-askUser tree conn = do
-    (putStrLn.question.getQuestion) tree
+askUser EmptyTree currentPath conn = do
+  putStrLn "I give up!"
+  animal <- askForAnimal
+  withTransaction conn (addAnimalGivenUp animal currentPath)
+
+askUser (Leaf animals) currentPath conn = guessAnimal animals currentPath conn
+askUser tree currentPath conn = do
+    let questionElement = getQuestion tree
+    putStrLn $ question questionElement
     answer <- getLine
-    askUser ((getDirection answer) tree) conn
+    let (direction, answerAnimal) = getDirection answer
+    askUser (direction tree) (((idQuestion questionElement), answerAnimal):currentPath) conn
 
 main = do
-    conn <- connectSqlite3 "animals.db"
+    conn <- connectSqlite3 "animals_new.db"
     animals <- fetchAnimals conn
     answers <- fetchAnswers conn
     questions <- fetchQuestions conn
-    askUser (buildTree questions answers animals) conn
+    --putStrLn $ show $ buildTree questions answers animals
+    askUser (buildTree questions answers animals) [] conn
 
-guessAnimal [animal] conn = do
+guessAnimal [animal] path conn = do
   putStrLn $ "Is it " ++ (show animal)
   answer <- getLine
   case answer of
@@ -34,9 +41,9 @@ guessAnimal [animal] conn = do
   where
     guessedWrong = do
       trueAnimal <- askForAnimal
-      addAnimal (idAnimal animal) trueAnimal conn
+      addAnimalGuessedWrong (idAnimal animal) trueAnimal path conn
 
-guessAnimal a@(animal:animals) conn = do
+guessAnimal a@(animal:animals) path conn = do
   putStrLn $ "Is it one of these: " ++ (show a)
   answer <- getLine
   case answer of
@@ -45,22 +52,28 @@ guessAnimal a@(animal:animals) conn = do
   where
     guessedWrong = do
       trueAnimal <- askForAnimal
-      addAnimal (idAnimal animal) trueAnimal conn
+      addAnimalGuessedWrong (idAnimal animal) trueAnimal path conn
     guessedRightAmong = do
       putStrLn "Yeey"
-      guessAnimal [animal] conn
+      guessAnimal [animal] path conn
 
 askForAnimal = do
   putStrLn "What is it?"
   animal <- getLine
   return animal
 
-addAnimal oursAnimalId animalName conn = do
+addAnimalGivenUp animalName answers conn = do
+  insertAnimalInDb animalName conn
+  animalDb <- getAnimalId animalName conn
+  insertManyAnswers (map (\(q, a) -> [a, (idAnimal (extract animalDb)), q]) answers) conn
+  commit conn
+
+addAnimalGuessedWrong oursAnimalId animalName path conn = do
   putStrLn "Give me a questions to make difference between these two?"
   question <- getLine
   putStrLn "Which answers 'yes' to it? (ours - 1/ yours - 2)"
   which <- getLine
-  withTransaction conn (updateData oursAnimalId animalName question which)
+  withTransaction conn (updateData oursAnimalId animalName question which path)
   return ()
 
 extract (Just a) = a
@@ -70,29 +83,17 @@ whichAnimalTrue which oursAnimalId animalId = case which of
     "1" -> (oursAnimalId, animalId)
     "2" -> (animalId, oursAnimalId)
 
-updateData oursAnimalId animalName question which conn = do
+-- Освен това да има списък със всички зададени въпроси до сега и тях да ги запише, както е било отговорено.
+updateData oursAnimalId animalName question which path conn = do
   insertAnimalInDb animalName conn
   animalDb <- getAnimalId animalName conn
   insertQuestionInDb question conn
   questionDB <- getQuestionId question conn
   let questionId = (idQuestion.extract) questionDB
   let (trueAnimal, falseAnimal) = whichAnimalTrue which oursAnimalId ((idAnimal.extract) animalDb)
-  insertManyAnswers [[1, trueAnimal, questionId], [0, falseAnimal, questionId]] conn
+  let otherAnswers = map (\(q, a)-> [a, trueAnimal, q]) path
+  insertManyAnswers ([[1, trueAnimal, questionId], [0, falseAnimal, questionId]] ++ otherAnswers) conn
   commit conn
-
-
-
-
-
-
-{-
-insertAnswers which oursAnimalId animal questionId = [[1, trueAnimal, questionId], [0, falseAnimal, questionId]
-  where (trueAnimal, falseAnimal) = whichAnimalTrue which oursAnimalId ((idAnimal.extract) animalDb)-}
-
-
-
-
-
 
 
 

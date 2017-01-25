@@ -59,27 +59,31 @@ biggestEntropy questions animals answers = fst $ maximumBy comparing $ map (\ q 
     mapAnswers = answersToMap answers
     comparing (_, e1) (_, e2) = compare e1 e2
 
-getAnimalsUnknownAnswer :: [Animal] -> Maybe [Answer] -> [Animal]
-getAnimalsUnknownAnswer _ Nothing = []
-getAnimalsUnknownAnswer animals (Just answersToQuestion) = map (\id -> head $ (filter ((==id).(idAnimal)) animals)) unknownIds
+getAnimalsUnknownAnswer :: [Animal] -> [Animal] -> [Animal] -> [Animal]
+getAnimalsUnknownAnswer animals positiveAnimals negativeAnimals = Set.toList(Set.difference (Set.fromList animals) union)
   where
-    unknownIds = Set.toList(Set.difference (Set.fromList (map animalId answersToQuestion)) (Set.fromList (map idAnimal animals)))
+    positiveAnimalsSet = Set.fromList positiveAnimals
+    negativeAnimalsSet = Set.fromList negativeAnimals
+    union = Set.union positiveAnimalsSet negativeAnimalsSet
 
-getAnimalsOnAnswer :: Maybe [Answer] -> [Animal] -> Int -> [Animal]
-getAnimalsOnAnswer Nothing _ _ = []
-getAnimalsOnAnswer (Just answersToQuestion) animals targetAnswer = map (\id -> head $ (filter ((==id).(idAnimal)) animals)) answered
-  where answered = map animalId $ filter ((==targetAnswer).answer) answersToQuestion
+--getAnimalsOnAnswer Nothing _ _ = []
+getAnimalsOnAnswer :: [Answer] -> [Animal] -> Int -> Int -> [Animal]
+getAnimalsOnAnswer answers animals targetAnswer targetQuestion = map (\id -> head $ (filter ((==id).(idAnimal)) animals)) answeredAnimals
+  where
+    answeredAnimals = map animalId $ filter (\a -> (answer a)==targetAnswer && (questionId a) ==targetQuestion) answers
 
 splitAnswer  :: Question -> [Answer] -> [Animal] -> ([Animal], [Animal])
-splitAnswer nextQuestion answers animals = (negativeAnimals ++ unknownAnimals, positiveAnimal ++ unknownAnimals)
+splitAnswer nextQuestion answers animals = (negativeAnimals ++ unknownAnimals, positiveAnimals ++ unknownAnimals)
   where
-    answersToQuestion = Map.lookup (idQuestion nextQuestion) $ answersToMap answers
-    positiveAnimal = getAnimalsOnAnswer answersToQuestion animals 1
-    negativeAnimals = getAnimalsOnAnswer answersToQuestion animals 0
-    unknownAnimals = getAnimalsUnknownAnswer animals answersToQuestion
+    questionId = idQuestion nextQuestion
+    positiveAnimals = getAnimalsOnAnswer answers animals 1 questionId
+    negativeAnimals = getAnimalsOnAnswer answers animals 0 questionId
+    unknownAnimals = getAnimalsUnknownAnswer animals positiveAnimals negativeAnimals
 
 -- Builds the decision tree based on questions, animals and answers
 buildTree :: [Question] -> [Answer] -> [Animal] -> DTree
+buildTree _ _ [] = EmptyTree
+buildTree _ [] animals = EmptyTree
 buildTree [] _ animals = Leaf animals
 buildTree _ _ [animal] = Leaf [animal]
 buildTree questions answers animals = Node nextQuestion (buildTree filteredQuestions answersLeft leftAnimals) (buildTree filteredQuestions answersRight rightAnimals)

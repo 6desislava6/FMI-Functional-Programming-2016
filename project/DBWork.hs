@@ -17,11 +17,11 @@ fetchData table conn = do
   results <- fetchAllRowsAL query
   return $ transfromData results
 
-fetchAnimals :: (Record a, IConnection conn) => conn -> IO [a]
+fetchAnimals :: (IConnection conn) => conn -> IO [Animal]
 fetchAnimals = fetchData "Animals"
-fetchQuestions :: (Record a, IConnection conn) => conn -> IO [a]
+fetchQuestions :: (IConnection conn) => conn -> IO [Question]
 fetchQuestions = fetchData "Questions"
-fetchAnswers :: (Record a, IConnection conn) => conn -> IO [a]
+fetchAnswers :: (IConnection conn) => conn -> IO [Answer]
 fetchAnswers = fetchData "Answers"
 
 insertInDb table values conn = do
