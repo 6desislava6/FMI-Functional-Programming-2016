@@ -1,0 +1,22 @@
+CREATE TABLE Animals
+(
+ID INTEGER PRIMARY KEY AUTOINCREMENT,
+name varchar(255) NOT NULL
+);
+
+CREATE TABLE Questions
+(
+ID INTEGER PRIMARY KEY AUTOINCREMENT,
+question TEXT NOT NULL
+);
+
+--- 1 да, 0 не, -1 не се знае
+
+CREATE TABLE Answers (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    answer INTEGER,
+    animal_id INTEGER,
+    question_id INTEGER,
+    FOREIGN KEY(animal_id) REFERENCES Animals(ID),
+    FOREIGN KEY(question_id) REFERENCES Questions(ID)
+);
